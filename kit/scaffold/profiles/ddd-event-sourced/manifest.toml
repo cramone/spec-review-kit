@@ -1,0 +1,50 @@
+# Profile manifest — ddd-event-sourced
+#
+# Target: event-sourced DDD service with CQRS. Write path appends events to an
+# event store; read models project from the event stream. Suited to systems where
+# audit trail, time travel, and projection rebuild are explicit requirements.
+
+[profile]
+name          = "ddd-event-sourced"
+display_name  = "DDD + CQRS + Event Sourcing"
+unit_term     = "aggregate"           # vocabulary used in prompts
+unit_container      = "contexts"      # top-level grouping folder under docs/spec/
+sub_unit_container  = "aggregates"    # per-context sub-folder for units
+
+[structure]
+# Files at docs/spec/ root
+root_files = ["README.md", "glossary.md"]
+
+# Architecture subfolder files
+architecture_files = ["system-architecture.md", "domain-model.md", "bounded-contexts.md"]
+
+# Per-unit files (one per aggregate). `{{unit}}` is substituted with the lower-case
+# aggregate name; `{{Unit}}` with the Pascal-case form.
+unit_files = [
+  "{{unit}}.api.md",
+  "{{unit}}.write-model.md",
+  "{{unit}}.read-model.md",
+  "{{unit}}.scenarios.md",
+]
+
+[shared]
+# Always written for this profile — the baseline cross-cutting concerns an
+# event-sourced DDD system needs stated before any aggregate makes sense.
+required = [
+  "api-conventions",
+  "error-catalog",
+  "event-store-and-messaging",
+  "multi-tenancy-and-auth",
+  "cross-aggregate-rules",
+]
+# Offered in the install-time menu; user picks per repo.
+optional = [
+  "saga-patterns",
+  "audit-trail",
+  "cascade-rules",
+  "retention-and-disposition",
+  "privacy-and-pii",
+  "erasure",
+  "preservation",
+  "operations",
+]

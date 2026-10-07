@@ -1,0 +1,39 @@
+# Profile manifest — ddd-crud
+#
+# Target: DDD service with aggregates, but a classic CRUD read/write model
+# (one state class, no event stream). Suited to systems where consistency is
+# strong, replay is not required, and read models can be derived from the
+# aggregate state directly.
+
+[profile]
+name          = "ddd-crud"
+display_name  = "DDD + CRUD (no event sourcing)"
+unit_term     = "aggregate"
+unit_container     = "contexts"
+sub_unit_container = "aggregates"
+
+[structure]
+root_files = ["README.md", "glossary.md"]
+architecture_files = ["system-architecture.md", "domain-model.md", "bounded-contexts.md"]
+unit_files = [
+  "{{unit}}.api.md",
+  "{{unit}}.model.md",
+  "{{unit}}.scenarios.md",
+]
+
+[shared]
+required = [
+  "api-conventions",
+  "error-catalog",
+  "multi-tenancy-and-auth",
+  "cross-aggregate-rules",
+]
+optional = [
+  "audit-trail",
+  "cascade-rules",
+  "retention-and-disposition",
+  "privacy-and-pii",
+  "erasure",
+  "preservation",
+  "operations",
+]

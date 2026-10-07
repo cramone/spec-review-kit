@@ -1,0 +1,31 @@
+# Profile manifest — library
+#
+# Target: SDK or library whose spec covers its public API surface — types,
+# functions, contracts, extension points, policy hooks. No runtime behaviour.
+# Suited to platform SDKs, client libraries, or shared packages consumed by
+# multiple services.
+
+[profile]
+name          = "library"
+display_name  = "Library / SDK"
+unit_term     = "module"
+unit_container     = "modules"
+sub_unit_container = ""
+
+[structure]
+root_files = ["README.md", "glossary.md"]
+architecture_files = ["system-architecture.md"]
+unit_files = [
+  "{{unit}}.api.md",
+  "{{unit}}.contracts.md",
+]
+
+[shared]
+required = [
+  "contracts",
+  "extension-points",
+]
+optional = [
+  "error-catalog",
+  "operations",
+]

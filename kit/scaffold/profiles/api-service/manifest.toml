@@ -1,0 +1,34 @@
+# Profile manifest — api-service
+#
+# Target: HTTP API service without explicit DDD vocabulary. Resources are
+# top-level; each has endpoints, request/response shapes, errors, scenarios.
+# Suited to CRUD-shaped services, read-mostly APIs, and public-facing REST
+# surfaces.
+
+[profile]
+name          = "api-service"
+display_name  = "REST API service"
+unit_term     = "resource"
+unit_container     = "resources"
+sub_unit_container = ""              # flat — no sub-grouping
+
+[structure]
+root_files = ["README.md", "glossary.md"]
+architecture_files = ["system-architecture.md"]
+unit_files = [
+  "{{unit}}.api.md",
+  "{{unit}}.scenarios.md",
+]
+
+[shared]
+required = [
+  "api-conventions",
+  "error-catalog",
+]
+optional = [
+  "multi-tenancy-and-auth",
+  "audit-trail",
+  "privacy-and-pii",
+  "erasure",
+  "operations",
+]

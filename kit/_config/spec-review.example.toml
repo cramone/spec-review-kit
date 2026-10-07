@@ -43,7 +43,10 @@ severity = ["P0", "P1", "P2", "P3"]
 versions = ["V1", "V2", "V3", "V4", "V5", "Q1", "Q2", "Q3", "Q4"]
 # Project-specific tokens — DynamoDB index names, .NET format specifiers,
 # regex fragments, anything that looks like an id in your spec vocabulary.
-custom   = []
+# `GSI1`/`GSI2`/`GSI3` and `D10` are included by default because they appear
+# in common DynamoDB and .NET format-specifier vocabulary — drop them if
+# your repo uses neither.
+custom   = ["GSI1", "GSI2", "GSI3", "D10"]
 
 [guard.attribution]
 # Flagged by the editorial check when they appear as the actor in sentences
@@ -78,6 +81,21 @@ enabled = [
 # `/init-spec-review reconfigure`.
 enabled    = false
 index_file = "docs/compliance/INDEX.md"
+
+[scaffold]
+# Pinned at scaffold time. The chosen profile and the units it created.
+# `/init-spec-review reconfigure` does not change these — a profile change
+# is handled by hand.
+profile = ""                       # "ddd-event-sourced", "ddd-crud", "api-service", "library"
+units   = []                       # top-level units created at scaffold (contexts / resources / modules)
+
+[tracker]
+# Optional project tracker vocabulary. Substituted into CLAUDE.md guardrail
+# phrases. Reconfigure via `/init-spec-review reconfigure`.
+enabled          = false
+name             = ""              # free-form display name, e.g. "Azure DevOps Media board"
+reference_phrase = ""              # how CLAUDE.md refers to it, e.g. "the Media ADO board"
+                                   # when empty, CLAUDE.md uses "the project tracker"
 
 [audit.dimensions]
 # Shown in the FINDING template + audit INDEX. Edit freely — the kit does

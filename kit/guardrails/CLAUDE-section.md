@@ -31,7 +31,7 @@ The application code (`src/`, `tests/`, infra) is not aligned to the spec, and t
 
 **The divergence is a defect in the code**, raised and scheduled like any other. `{{SPEC_PATH}}/` is a specification, not a description: where it states behaviour, that behaviour is what the system is required to do, whether or not it does it yet.
 
-**A missing platform capability is the same kind of gap as a missing handler.** Write the spec as if the infrastructure exists and can be implemented properly later. The missing capability goes in `{{DEPGAPS_PATH}}/` and § Known deferred/partial work — **never** into `{{SPEC_PATH}}/` as a weaker statement.
+**A missing platform capability is the same kind of gap as a missing handler.** Write the spec as if the infrastructure exists and can be implemented properly later. The missing capability goes in `{{DEPGAPS_PATH}}/`, {{TRACKER_PHRASE}}, and § Known deferred/partial work — **never** into `{{SPEC_PATH}}/` as a weaker statement.
 
 **Do not resolve a disagreement by editing either side quietly.** Correcting the spec to match code you happened to read is the same mistake as changing code to match a spec statement without the change being visible.
 
@@ -72,7 +72,7 @@ A caveat belongs in a spec file when it states a consequence of the **specified 
 | Content | Home |
 |---|---|
 | Why a decision was made; rejected options | `{{ADRS_PATH}}/` |
-| Whether code exists, is wired or deployed | the project tracker · § Known deferred/partial work in this file |
+| Whether code exists, is wired or deployed | {{TRACKER_PHRASE}} · § Known deferred/partial work in this file |
 | Review findings, drift, evidence | out-of-repo working notes |
 | Spec audits — in-flight design findings | `{{REVIEW_PATH}}/spec-audit-<date>/INDEX.md`; docs-guard skips `{{REVIEW_PATH}}/`; a spec file never cites a finding |
 | Dependency gaps | `{{DEPGAPS_PATH}}/INDEX.md` |

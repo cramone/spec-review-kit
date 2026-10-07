@@ -15,6 +15,7 @@ Extracted from a long-running audit cycle; proven on a .NET/DynamoDB codebase, g
 | **`docs/review/_template/`** | INDEX + FINDING templates for a new audit |
 | **`docs-guard.yml`** | CI workflow that runs both guards on every spec change |
 | **`CLAUDE.md § Spec review`** | Guardrail section pasted (markered, idempotent) into the target repo's `CLAUDE.md` |
+| **Spec scaffold** | Opinionated `docs/spec/` tree per profile (`ddd-event-sourced`, `ddd-crud`, `api-service`, `library`) — glossary, architecture, shared concerns, per-unit shape, ADRs, dependency gaps, compliance mapping. Every scaffolded file passes `docs_guard` from install |
 
 ## Install
 
@@ -28,7 +29,12 @@ Then in the target repo:
 /init-spec-review
 ```
 
-The skill asks for config values, writes `.spec-review.toml`, copies files, appends the guardrail section between managed markers.
+The skill:
+1. Asks config values (project name, owner, paths, platform-check target, tracker, compliance).
+2. If `docs/spec/` is empty, offers a scaffold step — pick a profile and name the top-level units.
+3. Writes `.spec-review.toml`, copies scripts / commands / review templates, appends the CLAUDE.md guardrail section between managed markers.
+
+Run `/init-spec-review scaffold` to run just the scaffold step without the full install. Run `/init-spec-review reconfigure` to update tracker / platform-check / paths without re-scaffolding.
 
 ## Update
 
