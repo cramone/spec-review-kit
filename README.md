@@ -16,6 +16,7 @@ Extracted from a long-running audit cycle; proven on a .NET/DynamoDB codebase, g
 | **`docs-guard.yml`** | CI workflow that runs both guards on every spec change |
 | **`CLAUDE.md § Spec review`** | Guardrail section pasted (markered, idempotent) into the target repo's `CLAUDE.md` |
 | **Spec scaffold** | Opinionated `docs/spec/` tree per profile (`ddd-event-sourced`, `ddd-crud`, `api-service`, `library`) — glossary, architecture, shared concerns, per-unit shape, ADRs, dependency gaps, compliance mapping. Every scaffolded file passes `docs_guard` from install |
+| **Analyze + migrate** | Classify an existing repo's content against the kit's slots; interactive migration with full backup and per-row y/N approval. Four reports (`MIGRATION-PLAN`, `GAPS`, `DIVERGENCES`, `GUARD-BASELINE`) proposed before any file moves |
 
 ## Install
 
@@ -35,6 +36,31 @@ The skill:
 3. Writes `.spec-review.toml`, copies scripts / commands / review templates, appends the CLAUDE.md guardrail section between managed markers.
 
 Run `/init-spec-review scaffold` to run just the scaffold step without the full install. Run `/init-spec-review reconfigure` to update tracker / platform-check / paths without re-scaffolding.
+
+## Analyze an existing repo
+
+For a repo that already has spec content in a different shape, use the analyze + migrate pair:
+
+```
+/init-spec-review analyze    # read-only — writes four reports under .spec-review-analysis-<date>/
+```
+
+The analyze step reads every file in scope (`docs/**/*.md`, `README.md`, `CONTRIBUTING.md`, `src/**/README.md`, top-level `*.md`), classifies each against the kit's slot taxonomy, and emits:
+
+- `MIGRATION-PLAN.md` — proposed source → slot mapping with action (`move`, `move+trim`, `split`, `merge`, `keep`, `delete`, `tbd`) and confidence
+- `GAPS.md` — kit slots the profile expects but the repo has no content for
+- `DIVERGENCES.md` — files kept in place (operator / runbook / meeting-notes / code-heavy)
+- `GUARD-BASELINE.md` — pre-migration `docs_guard` hit count
+
+Review `MIGRATION-PLAN.md`, correct any row the classifier got wrong, then:
+
+```
+/init-spec-review migrate    # interactive — every move needs y/N
+```
+
+Migrate backs up the full source tree to `.spec-review-backup-<date>/` first, then walks the plan row by row. Every move / split / merge / delete requires explicit approval. Progress is logged to `MIGRATION-LOG.md`; a quit resumes from the stopping point.
+
+Post-migration, run `/spec-quality-audit` to address the remaining `docs_guard` hits.
 
 ## Update
 

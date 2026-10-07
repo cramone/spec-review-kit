@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 — analyze + migrate
+
+Classify an existing repo's content against the kit's slots; migrate interactively with full backup and per-row y/N approval.
+
+- `kit/analyze/taxonomy.md` — classification reference: slot catalogue, filename / content / path signals, action vocabulary, scope rules
+- `kit/analyze/templates/MIGRATION-PLAN.md` — proposed source → slot mapping with action + confidence + split/merge groups
+- `kit/analyze/templates/GAPS.md` — kit slots the profile expects but the repo has no content for
+- `kit/analyze/templates/DIVERGENCES.md` — files kept in place by design (operator / runbook / meeting-notes / code-heavy)
+- `kit/analyze/templates/GUARD-BASELINE.md` — pre-migration `docs_guard` state
+- `/init-spec-review analyze` — scan `docs/**`, `README.md`, `CONTRIBUTING.md`, `src/**/README.md`, top-level `*.md`; emit four reports under `.spec-review-analysis-<date>/`. Zero file moves.
+- `/init-spec-review migrate` — walk the plan interactively (propose-only, every move needs y/N); back up to `.spec-review-backup-<date>/`; log every decision to `MIGRATION-LOG.md`. Hand off to `/spec-quality-audit` for remaining `docs_guard` hits.
+
 ## 0.2.0 — spec scaffold
 
 Scaffold a `docs/spec/` tree at install time. Four profiles cover common shapes; shared concerns menu picks the cross-cutting files that fit the system.

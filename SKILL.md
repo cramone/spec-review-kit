@@ -1,7 +1,7 @@
 ---
 name: init-spec-review
-description: Scaffold the spec-review kit into the current repo. Use when the user says "setup spec review", "install spec review kit", "init spec review kit", "scaffold spec", or runs /init-spec-review. Interactive — asks for project name, owner, platform-check repo, team names, custom tokens, tracker, scaffold profile. Writes .spec-review.toml, scaffolds docs/spec tree, copies scripts/workflow/commands/templates, appends a managed CLAUDE.md guardrail section.
-allowed-tools: Read, Grep, Glob, Edit, Write, AskUserQuestion, Bash(git status:*), Bash(git rev-parse:*), Bash(ls:*), Bash(mkdir:*), Bash(cp:*), Bash(cat:*)
+description: Scaffold / install / analyze / migrate the spec-review kit. Use when the user says "setup spec review", "install spec review kit", "scaffold spec", "analyze existing spec", "migrate to spec review kit", or runs /init-spec-review. Interactive — asks for project config and (optionally) scaffold profile. Supports analyze mode (classify existing content against kit slots; writes read-only reports) and migrate mode (walk the analysis plan interactively, backup first, apply approved moves).
+allowed-tools: Read, Grep, Glob, Edit, Write, AskUserQuestion, Bash(git status:*), Bash(git rev-parse:*), Bash(git mv:*), Bash(git rm:*), Bash(ls:*), Bash(mkdir:*), Bash(cp:*), Bash(cat:*), Bash(date:*), Bash(python .github/scripts/docs_guard.py:*), Bash(python3 .github/scripts/docs_guard.py:*)
 ---
 
 # init-spec-review
@@ -16,6 +16,8 @@ Read `$ARGUMENTS`:
 |---|---|
 | empty | **Install.** Pre-flight, gather config, scaffold if docs/spec empty, copy kit files, append CLAUDE section. |
 | `scaffold` | **Scaffold only.** Create the spec tree per profile; stop before review-kit config. |
+| `analyze` | **Analyze.** Read-only. Scan existing content, classify against kit slots, write four reports under `.spec-review-analysis-<date>/`. No file moves. See § 12. |
+| `migrate` | **Migrate.** Read the latest analysis plan; back up current content to `.spec-review-backup-<date>/`; walk each row interactively (propose-only); log decisions. See § 13. |
 | `reconfigure` | Re-gather config and re-copy. Preserves existing `.spec-review.toml` values as defaults. Updates `{{TRACKER_PHRASE}}` substitutions. Does not re-scaffold. |
 | `update` | Re-copy files only. `.spec-review.toml` untouched; CLAUDE section refreshed between markers. |
 | `uninstall` | Remove installed files + CLAUDE section (between markers). Prompt before each delete. Does not touch scaffolded `docs/spec/` content. |
@@ -268,6 +270,206 @@ RERENDER .github/workflows/docs-guard.yml
 REFRESH CLAUDE.md § Spec review (markered)
 ```
 
+## 12. Analyze
+
+When `$ARGUMENTS = analyze`:
+
+Classify every file in scope against the kit's slot taxonomy; emit four reports. **Zero file moves.** **Zero spec edits.** The analysis is a proposal the user reviews before migrate runs.
+
+### 12a. Pre-flight
+
+1. `git rev-parse --show-toplevel` — confirm git repo.
+2. Load `.spec-review.toml` if present. If missing, run § 2 config gathering (defaults loaded from the kit's example) so the taxonomy knows which profile and paths to classify against. Save the resulting toml at `.spec-review.toml` so re-runs are consistent (ask user to confirm).
+3. Compute analysis-date: `date -u +%Y-%m-%d`.
+4. Create `.spec-review-analysis-<date>/`. If it exists, offer: `overwrite` / `append-suffix` (`-01`, `-02`) / `abort`.
+5. Read `kit/analyze/taxonomy.md`. Load the per-profile unit shape from `kit/scaffold/profiles/<profile>/manifest.toml`.
+
+### 12b. Walk scope
+
+Scope from `kit/analyze/taxonomy.md § Scope`:
+
+```
+docs/**/*.md
+README.md
+CONTRIBUTING.md
+CHANGELOG.md
+src/**/README.md
+<top-level>/*.md (except LICENSE/NOTICE/AUTHORS)
+```
+
+For each file:
+- Read the file (full content for small files; first 200 lines + heading structure for large).
+- Compute signals per `kit/analyze/taxonomy.md § Classification signals`:
+  - Filename pattern match
+  - Content signal match (phrase / structure)
+  - Path prefix match
+- Score against every target slot; pick top candidate.
+- Assign confidence: `high` (filename + content + path agree), `medium` (two of three agree), `low` (one agrees).
+- Determine action: `move` / `move+trim` / `split` / `merge` / `keep` / `delete` / `tbd`.
+
+For files > ~400 lines or where confidence is `low`, consider delegating classification to the `Explore` agent in a batch to protect main context.
+
+### 12c. Detect splits and merges
+
+- **Split candidates:** a source file whose heading structure maps to multiple top-level slots (e.g. one file carrying `## HTTP`, `## State`, `## Errors`, `## Scenarios` → unit's api + write-model + error-catalog + scenarios).
+- **Merge candidates:** multiple source files whose top candidate slot is the same (e.g. three files that all score for `shared/error-catalog.md`).
+
+Group merge candidates by target slot before emitting the plan.
+
+### 12d. Run docs_guard baseline
+
+```bash
+python .github/scripts/docs_guard.py
+```
+
+If `docs_guard.py` is not yet installed, note "guard-not-installed" in `GUARD-BASELINE.md` and skip. (The user can run guard after `/init-spec-review` installs it; re-run analyze to refresh.)
+
+Capture raw output + per-check hit counts + top offending files.
+
+### 12e. Emit reports
+
+Copy `kit/analyze/templates/*.md` to `.spec-review-analysis-<date>/` with placeholders substituted:
+
+| Placeholder | Source |
+|---|---|
+| `{{ANALYSIS_DATE}}` | computed date |
+| `{{PROJECT_NAME}}` | config |
+| `{{PROFILE}}` | config |
+| `{{ANALYZE_SCOPE}}` | summary string of scope |
+| `{{GUARD_OUTPUT}}` | raw docs_guard output |
+| `{{SPEC_PATH}}` | config |
+| `{{REVIEW_PATH}}` | config |
+
+Fill in each report's table rows from the classifier's output.
+
+### 12f. Report
+
+```
+ANALYZED <n> files
+WROTE   .spec-review-analysis-<date>/MIGRATION-PLAN.md    (<n> rows)
+        .spec-review-analysis-<date>/GAPS.md               (<n> missing slots)
+        .spec-review-analysis-<date>/DIVERGENCES.md        (<n> kept-in-place)
+        .spec-review-analysis-<date>/GUARD-BASELINE.md     (<total> hits)
+BY ACTION   move:<n>  move+trim:<n>  split:<n>  merge:<n>  keep:<n>  delete:<n>  tbd:<n>
+BY CONFIDENCE  high:<n>  medium:<n>  low:<n>
+
+NEXT    1. Review MIGRATION-PLAN.md — edit any row the classifier got wrong
+        2. Confirm GAPS.md recommendations
+        3. Confirm DIVERGENCES.md kept-in-place list
+        4. Run `/init-spec-review migrate` to apply decisions interactively
+```
+
+### 12g. Analyze guardrails
+
+- Read-only. No `git mv`, `Write` to source files, or `Edit` to anything outside `.spec-review-analysis-<date>/`.
+- No reports commit automatically. User reviews, optionally commits.
+- Add `.spec-review-analysis-*/` to `.gitignore` if the user prefers reports stay local.
+- The classifier's output is a proposal, not a verdict. Every row says "proposed" implicitly; the user corrects before migrate runs.
+
+## 13. Migrate
+
+When `$ARGUMENTS = migrate`:
+
+Walk the latest `MIGRATION-PLAN.md` row by row. Every move / split / merge / delete requires **y/N** from the user. Back up the full target before any change.
+
+### 13a. Pre-flight
+
+1. `git rev-parse --show-toplevel`.
+2. Confirm `.spec-review.toml` exists. If not, stop: `migrate requires an installed kit — run /init-spec-review first`.
+3. Find the latest `.spec-review-analysis-*/MIGRATION-PLAN.md`. If none exists, stop: `migrate requires an analysis — run /init-spec-review analyze first`.
+4. Confirm `git status` is clean (no uncommitted changes). If dirty, offer: `commit first` / `stash` / `abort`.
+5. Compute migrate-date: `date -u +%Y-%m-%d`.
+
+### 13b. Back up
+
+Create `.spec-review-backup-<date>/`. Copy every source file named in `MIGRATION-PLAN.md` into the backup, preserving its original path:
+
+```
+.spec-review-backup-<date>/
+  docs/
+    old/
+      auth.md
+  README.md
+```
+
+Verify the backup file count matches the plan's row count. Write `.spec-review-backup-<date>/MANIFEST.md` listing every backed-up path.
+
+### 13c. Walk the plan
+
+Parse `MIGRATION-PLAN.md`. For each row (skip `keep` rows — they are no-ops):
+
+Show the user:
+```
+[<i>/<n>] <source>
+  action: <action>
+  target: <target slot>
+  confidence: <high|medium|low>
+  notes: <notes>
+```
+
+Prompt options:
+| Key | Meaning |
+|---|---|
+| `y` | Apply as proposed |
+| `n` | Skip this row (leave source in place) |
+| `e` | Open source in Read view; let user re-decide after reading |
+| `t` | Change target slot (user types new path) |
+| `a` | Change action (user picks from valid alternatives) |
+| `q` | Quit the walk; progress persists in `MIGRATION-LOG.md` |
+
+On `y`:
+- `move`: `git mv <source> <target>`. If git move fails (not tracked), use `Write` to target + delete source.
+- `move+trim`: Read source; apply trim transforms (strip change-history prose, dates in headings, attribution). `Write` to target with trimmed content. `git rm` source.
+- `split`: for each named target slot, ask user which headings/sections go to that slot. Write each slice to its target. `git rm` source.
+- `merge`: append source content under a `## From <source-path>` heading in the target (or into an existing matching heading if one exists). Second and subsequent merge-ins ask user for the merge strategy (append / replace / dedupe).
+- `delete`: `git rm <source>` after confirming (second prompt: `delete <source>? (y/N)` — this is the irreversible one).
+
+Log every decision + action to `MIGRATION-LOG.md`:
+```
+| Timestamp | Source | Decision | Target | Notes |
+|---|---|---|---|---|
+| 2026-10-07T14:22:00Z | docs/old/auth.md | applied move+trim | docs/spec/shared/multi-tenancy-and-auth.md | trimmed § History |
+```
+
+### 13d. Post-walk
+
+1. Run `docs_guard`. Capture new hit count.
+2. Append to `MIGRATION-LOG.md`:
+```
+## Baseline
+- Pre-migration docs_guard hits: <baseline count>
+- Post-migration docs_guard hits: <new count>
+- Delta: <reduction>
+```
+3. Append to `CLAUDE.md § Known deferred/partial work` any `tbd` rows that were deferred (if the user chose `n` or `q`).
+
+### 13e. Report
+
+```
+MIGRATED <n> rows applied of <total>
+BACKED UP .spec-review-backup-<date>/ (<n> files)
+LOG     .spec-review-backup-<date>/MIGRATION-LOG.md
+GUARD   <baseline> → <new> hits (<delta> reduction)
+
+DEFERRED <n> rows (skipped or quit mid-walk)
+         Resume: `/init-spec-review migrate` picks up at the first unapplied row
+
+NEXT    1. Review MIGRATION-LOG.md for every applied move
+        2. Run `/spec-quality-audit` for the full standing audit — addresses remaining docs_guard hits + 16-quality semantic walk
+        3. Fill in `_(fill in: ...)_` placeholders in any newly-created slots
+        4. Commit the migration (one commit per logical group is recommended)
+        5. Delete `.spec-review-backup-<date>/` once satisfied the migration is correct
+```
+
+### 13f. Migrate guardrails
+
+- **Never** `git rm` a source without a y/N for that specific file.
+- **Never** touch files not named in `MIGRATION-PLAN.md`.
+- **Never** modify `.spec-review-backup-<date>/` after it is written.
+- **Never** commit the migration — the user commits after reviewing.
+- If a target file already exists before `move`/`move+trim`, prompt: `target <path> exists — append / overwrite / rename-source / skip?`
+- If the user quits mid-walk, record the stopping index in `MIGRATION-LOG.md` so the next invocation resumes.
+
 ## 11. Uninstall
 
 When `$ARGUMENTS = uninstall`:
@@ -288,6 +490,9 @@ When `$ARGUMENTS = uninstall`:
 - **Never** write a `.spec-review.toml` with `platform_check.enabled = true` but empty `repo` / `relative_path`.
 - **Never** write a `.spec-review.toml` with `tracker.enabled = true` but empty `reference_phrase`.
 - **Never** write a `.spec-review.toml` with `compliance.enabled = true` but no `paths.compliance`.
-- **Do not** commit the install — the user commits after reviewing.
+- **Do not** commit the install, scaffold, analyze, or migrate — the user commits after reviewing.
 - **Do not** re-scaffold on `reconfigure` or `update`.
+- **Do not** modify `.spec-review-analysis-*/` after analyze emits reports.
+- **Do not** modify `.spec-review-backup-*/` after migrate writes the backup.
+- **Never** run `git mv` or `git rm` in migrate without a y/N for that specific file.
 - `.spec-review-kit-version` is write-only by this skill; don't let the repo's own tooling edit it.
