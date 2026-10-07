@@ -1,0 +1,57 @@
+name: docs-guard
+
+# Enforces CLAUDE.md § "Spec files state the specified system" over docs/.
+#
+# Runs on any change to docs/ or to the guard itself. Every check is hard zero — there is no
+# baseline of accepted hits, so the only ways past a hit are rewording the spec or changing
+# the detector, and a change to the detector is itself a change this workflow runs on.
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '!docs/review/**'
+      - '.github/scripts/docs_guard.py'
+      - '.github/scripts/compliance_coverage.py'
+      - '.github/workflows/docs-guard.yml'
+      - '.spec-review.toml'
+  push:
+    branches:
+      - main
+      - develop
+      - 'release/**'
+      - 'spec/**'
+    paths:
+      - 'docs/**'
+      - '!docs/review/**'
+      - '.github/scripts/docs_guard.py'
+      - '.github/scripts/compliance_coverage.py'
+      - '.github/workflows/docs-guard.yml'
+      - '.spec-review.toml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guard:
+    name: spec purity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run docs-guard
+        run: python .github/scripts/docs_guard.py
+
+<!-- compliance-step-start -->
+      - name: Run compliance-coverage
+        run: python .github/scripts/compliance_coverage.py
+<!-- compliance-step-end -->

@@ -1,0 +1,94 @@
+# Spec review kit — repo config. Scripts (docs_guard.py, compliance_coverage.py)
+# and the /spec-audit-next, /spec-quality-audit slash commands read from here.
+#
+# Install copies this to `.spec-review.toml` at repo root. Edit after install;
+# re-run `/init-spec-review reconfigure` to update the installed snapshot.
+
+[project]
+name  = "your-project"
+owner = "Your Name"
+
+[paths]
+# All paths relative to repo root. Omit a key to disable the subtree
+# (compliance / dependency_gaps are optional).
+spec            = "docs/spec"
+adrs            = "docs/adrs"
+review          = "docs/review"
+dependency_gaps = "docs/dependency-gaps"
+compliance      = "docs/compliance"
+
+[platform_check]
+# The one external repo an auditor may read for platform-capability evidence.
+# Set `enabled = false` if no such repo exists — install strips the
+# `platform-check` bucket from /spec-audit-next and the "code reads: X only"
+# guardrails from the pasted CLAUDE.md section.
+enabled       = false
+repo          = ""
+relative_path = ""
+
+[guard]
+# IDs legitimate without a docs/-internal definition. An id matching one of
+# these families is treated as domain / standard vocabulary (e.g. `RFC-9457`,
+# `ISO-15489`, `UUID`).
+allow_families = ["BCP", "ISO", "RFC", "UTF", "SHA", "HTTP", "SI", "UUID"]
+
+# Bare tokens that look like ids but aren't. Grouped for readability; the
+# script flattens every group into one allow set at load time.
+[guard.allow_tokens]
+aws      = ["S3", "EC2", "ECS", "EKS", "RDS", "IAM", "VPC", "KMS"]
+codec    = ["MP3", "MP4", "AV1", "H264", "H265", "VP8", "VP9", "FFV1"]
+crypto   = ["UTF8", "SHA1", "SHA256", "SHA512", "MD5", "AES128", "AES256", "X509", "PKCS7", "BASE64"]
+http     = ["ISO8601", "IPV4", "IPV6", "H1", "H2", "H3", "H4", "H5", "H6"]
+severity = ["P0", "P1", "P2", "P3"]
+versions = ["V1", "V2", "V3", "V4", "V5", "Q1", "Q2", "Q3", "Q4"]
+# Project-specific tokens — DynamoDB index names, .NET format specifiers,
+# regex fragments, anything that looks like an id in your spec vocabulary.
+custom   = []
+
+[guard.attribution]
+# Flagged by the editorial check when they appear as the actor in sentences
+# like "<Name> decided", "<Name> requires", "<Name> asked". Attribution has
+# no place in a spec file — the design stands on its own.
+names = []
+teams = []
+
+[guard.references]
+# Files named in spec prose but living outside this repo. Named without a
+# link; the references check would otherwise flag them as unresolved.
+allow = []
+
+[guard.checks]
+# Comment out an entry to disable that check.
+enabled = [
+  "citations",
+  "build-status",
+  "dates",
+  "editorial",
+  "future-work",
+  "backcompat",
+  "links",
+  "references",
+  "truncation",
+  "structure",
+]
+
+[compliance]
+# When false, install skips compliance_coverage.py entirely and strips the
+# pre-flight step from /spec-quality-audit + the workflow. Enable later via
+# `/init-spec-review reconfigure`.
+enabled    = false
+index_file = "docs/compliance/INDEX.md"
+
+[audit.dimensions]
+# Shown in the FINDING template + audit INDEX. Edit freely — the kit does
+# not enforce a fixed set.
+A = "DDD / aggregate design"
+B = "event sourcing"
+C = "CQRS / read models"
+D = "concurrency, idempotency, ordering"
+E = "multi-tenancy & auth"
+F = "sagas & process managers"
+G = "cascade & lifecycle"
+H = "API contract & errors"
+I = "bottlenecks / capacity"
+J = "spec hygiene"
